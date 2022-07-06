@@ -1,2 +1,2 @@
 def myQuickConfig = readTrusted 'Jenkinsfile'
-echo "${myQuickConfig}"
+echo "${myQuickConfig} again"
