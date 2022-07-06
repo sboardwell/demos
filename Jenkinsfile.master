@@ -1,0 +1,2 @@
+def myQuickConfig = readTrusted 'Jenkinsfile'
+echo "${myQuickConfig}"
