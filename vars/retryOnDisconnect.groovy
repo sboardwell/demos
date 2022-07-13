@@ -13,9 +13,10 @@ def call(Map vars = [:], Closure body) {
         break
       } catch (x) {
         if (nodeWasKilled(x)) {
-        continue
-      } else {
-        throw x
+          continue
+        } else {
+          throw x
+        }
       }
     }
   }
