@@ -12,8 +12,8 @@ def call(Map vars = [:], Closure body) {
             job: env.JOB_NAME,
             parameters: myParams()
         )
-        throw x
       }
+      throw x
     }
   }
 }
