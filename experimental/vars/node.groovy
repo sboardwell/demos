@@ -1,6 +1,5 @@
 def call(Map vars = [:], Closure body) {
 
-  DSL steps = getBinding().getVariable('steps') as DSL
   // BODY
   if (body) {
     try {
