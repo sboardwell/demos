@@ -4,16 +4,20 @@ def call(Map vars = [:], Closure body) {
   int intervalInSeconds = vars.get('intervalInSeconds', 0) as int
 
   // BODY
-  int iteration = 0
+  int attemptedRetries = 0
   if (body) {
     while (iteration < retries) {
-      iteration++
       try {
         body()
         break
       } catch (x) {
         if (nodeWasKilled(x)) {
-          continue
+          if (attemptedRetries < retries) {
+            attemptedRetries++
+            continue
+          }
+          echo "Max retry attempts reached. Failing..."
+          throw x
         } else {
           throw x
         }
