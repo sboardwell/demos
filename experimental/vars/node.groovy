@@ -1,4 +1,4 @@
-def call(Map vars = [:], Closure body) {
+def call(String label, Closure body) {
 
   // BODY
   if (body) {
