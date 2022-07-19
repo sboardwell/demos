@@ -6,7 +6,7 @@ def call(Map vars = [:], Closure body) {
   // BODY
   int attemptedRetries = 0
   if (body) {
-    while (iteration < retries) {
+    while (attemptedRetries < retries) {
       try {
         body()
         break
