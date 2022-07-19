@@ -20,7 +20,7 @@ def call(Map vars = [:], Closure body) {
 }
 
 def myParams() {
-    return currentBuild.rawBuild.getAction(ParametersAction).getParameters()
+    return currentBuild.rawBuild.getAction(ParametersAction)?.getParameters()
 }
 
 @NonCPS
