@@ -9,7 +9,7 @@ def call(Map vars = [:], Closure body) {
   // BODY
   int attemptedRetries = 0
   if (body) {
-    while (iteration < retries) {
+    while (attemptedRetries < retries) {
       try {
         steps.invokeMethod('node', [label, body] as Object[])
         break
