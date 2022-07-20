@@ -1,5 +1,5 @@
 def call(String label, Closure body) {
-  call(['label': label, body])
+  call(['label': label], body)
 }
 
 def call(Map vars = [:], Closure body) {
