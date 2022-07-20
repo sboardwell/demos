@@ -1,7 +1,6 @@
 def call(Map vars = [:], Closure body) {
 
   int retries = vars.get('retries', 3) as int
-  int intervalInSeconds = vars.get('intervalInSeconds', 0) as int
 
   // BODY
   int attemptedRetries = 0
