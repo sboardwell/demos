@@ -1,6 +1,6 @@
 def call(String label, Closure body) {
 
-  int retries = vars.get('retries', 3) as int
+  int retries = 3
 
   // BODY
   int attemptedRetries = 0
