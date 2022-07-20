@@ -1,8 +1,4 @@
 def call(String label, Closure body) {
-  call(['label': label], body)
-}
-
-def call(Map vars = [:], Closure body) {
 
   int retries = vars.get('retries', 3) as int
 
