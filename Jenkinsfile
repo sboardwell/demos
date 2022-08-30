@@ -1,2 +1,2 @@
 echo "hi"
-echo "something"
+echo "something else"
