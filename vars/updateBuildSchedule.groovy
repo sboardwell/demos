@@ -3,7 +3,7 @@ import hudson.triggers.*
 import org.jenkinsci.plugins.parameterizedscheduler.ParameterizedTimerTrigger
 
 def call(def vars = [:]) {
-  def jobStr = vars.jobName 
+  def jobStr = vars.jobStr 
   def cronStr = vars.cronStr
   if (!jobStr || !cronStr) {
     error "You must pass both jobStr and cronStr as variables"
