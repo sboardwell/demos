@@ -11,7 +11,7 @@ pipeline {
               changeset 'build-schedules/test-pipeline'
             }
             steps {
-                updateBuildSchedule(jobStr: 'test-pipeline', cronStr: readTrusted('build-schedules/test-pipeline'))
+                updateBuildSchedule(jobStr: 'test-pipeline', cronStr: readFile('build-schedules/test-pipeline'))
             }
         }
         stage('Schedule test-pipeline-2') {
@@ -19,7 +19,7 @@ pipeline {
               changeset 'build-schedules/test-pipeline-2'
             }
             steps {
-                updateBuildSchedule(jobStr: 'test-pipeline-2', cronStr: readTrusted('build-schedules/test-pipeline-2'))
+                updateBuildSchedule(jobStr: 'test-pipeline-2', cronStr: readFile('build-schedules/test-pipeline-2'))
             }
         }
     }
