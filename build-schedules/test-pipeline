@@ -2,3 +2,5 @@
 H/2 * * * * %ENV=first
 # second cron
 H/3 * * * * %ENV=second
+# third cron
+H/3 * * * * %ENV=third
