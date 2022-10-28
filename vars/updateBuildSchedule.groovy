@@ -3,12 +3,12 @@ import hudson.triggers.*
 import org.jenkinsci.plugins.parameterizedscheduler.ParameterizedTimerTrigger
 
 def call(def vars = [:]) {
-  def jobStr = vars.jobStr 
+  def jobStr = vars.jobStr
   def cronStr = vars.cronStr
   if (!jobStr || !cronStr) {
     error "You must pass both jobStr and cronStr as variables"
   }
-  
+
   TriggerDescriptor TIMER_TRIGGER_DESCRIPTOR = Hudson.instance.getDescriptorOrDie(ParameterizedTimerTrigger.class)
 
   def item = Jenkins.instance.getItemByFullName(jobStr)
@@ -32,7 +32,7 @@ def call(def vars = [:]) {
    item.addTrigger(timertrigger);
    item.save();
   }
-  
+
 }
 
 def getCronWithLineBreaks(String cronStr) {
