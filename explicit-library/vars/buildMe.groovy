@@ -10,7 +10,7 @@ def call(String bucket, String bucketFolder, String deployUrl = "", Closure body
   podTemplate(name: 'gsutil', label: label, yaml: podYaml) {
     node(label) {
       body()
-      container(name: 'gsutil') {
+      container(name: 'shell') {
         sh "echo 'deploying something to -> gs://${bucket}${bucketFolder}'"
       }
     }
