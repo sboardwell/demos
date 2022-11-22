@@ -11,7 +11,7 @@ def call(String bucket, String bucketFolder, String deployUrl = "", Closure body
     node(label) {
       body()
       container(name: 'gsutil') {
-        sh "echo deploying something to -> gs://${bucket}${bucketFolder}"
+        sh "echo 'deploying something to -> gs://${bucket}${bucketFolder}'"
       }
     }
   }
