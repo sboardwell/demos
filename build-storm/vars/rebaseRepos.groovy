@@ -114,7 +114,7 @@ void processMultiBranchJobs(def folder) {
     }
 }
 
-//@NonCPS
+@NonCPS
 def copyHashes(File parentDir) {
     parentDir.traverse(type: groovy.io.FileType.FILES, nameFilter: ~/scm-last-seen-revision-hash.xml/) { source ->
         def dest = new File(source.parent, 'scm-revision-hash.xml')
