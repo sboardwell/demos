@@ -37,6 +37,33 @@ def sanitizePropertyIfNeeded(def currentProperty) {
 }
 
 //@NonCPS
+def triggerScan(def item, String infoPrefix = "[INFO]") {
+    println "${infoPrefix} : Waiting for the scan of '${item.fullName}' to stop before scheduling..."
+    while (item.isBuildBlocked()) {
+        sleep 1
+        println "${infoPrefix} : Still waiting for the scan of '${item.fullName}' to stop before scheduling..."
+    }
+    println "${infoPrefix} : Scan stopped!"
+
+    println "${infoPrefix} : Scheduling the scan of '${item.fullName}'..."
+    item.scheduleBuild(0)
+
+    println "${infoPrefix} : Waiting for the scan of '${item.fullName}' to start..."
+    while(!item.isBuildBlocked()) {
+        sleep 1
+        println "${infoPrefix} : Still waiting for the scan of '${item.fullName}' to start..."
+    }
+    println "${infoPrefix} : Scan started!"
+
+    println "${infoPrefix} : Scan the scan of '${item.fullName}' to start..."
+    while(item.isBuildBlocked()) {
+        println "${infoPrefix} : Waiting for the scan of '${item.fullName}' to stop..."
+        sleep 1
+    }
+    println "${infoPrefix} : Scan stop!"
+}
+
+//@NonCPS
 def processFolder(String folderFullName) {
     def folder = Jenkins.instance.getAllItems(OrganizationFolder.class).find { it.fullName == folderFullName}
     println "[INFO] : Checking ${folder.fullName}... "
@@ -52,13 +79,7 @@ def processFolder(String folderFullName) {
             folder.getProperties().remove(currentProperty)
             folder.addProperty(tempProperty)
             println "[INFO] : Scheduling : ${folder.fullName}..." + new Date()
-            def buildFuture = folder.scheduleBuild2(0).getFuture()
-            while (!buildFuture.isDone()) {
-                println "Waiting for the scan of '${folder.fullName}' to finish..."
-                sleep 10
-            }
-            def build = buildFuture.get()
-            println "[INFO] : ${build.result} - duration: ${build.durationString}"
+            triggerScan(folder)
             processMultiBranchJobs(folder.fullName)
         } finally {
             println "[INFO] : Reinstating original NoTriggerOrganizationFolderProperty values for ${folder.fullName}... " + new Date()
@@ -67,58 +88,6 @@ def processFolder(String folderFullName) {
         }
    }
 }
-
-//@NonCPS
-//def processFolder(folder) {
-//    println "[INFO] : Checking ${folder.fullName}... "
-//    NoTriggerOrganizationFolderProperty property = folder.getProperties().get(NoTriggerOrganizationFolderProperty.class)
-//    String actualRegex = property.getBranches()
-//    //NoTriggerOrganizationFolderProperty propertyAfter = new NoTriggerOrganizationFolderProperty(actualRegex.replace('NEEDS_REBASING_PREFIX', ''))
-//    //propertyAfter.setStrategy(property.getStrategy())
-//    // check to see the no trigger property has been prefixed or name passed explicitly
-//    //if (actualRegex.startsWith('NEEDS_REBASING_PREFIX') || folder.fullName == params?.ORG_FOLDER_NAME) {
-//        String randomRegex = 'bla' + System.currentTimeMillis()
-//        println "[INFO] : Current regex : ${actualRegex}"
-//        println "[INFO] : Temp regex : ${randomRegex}"
-//        //println "[INFO] : Final regex : ${propertyAfter.getBranches()}"
-//    NoTriggerOrganizationFolderProperty newProperty = new NoTriggerOrganizationFolderProperty(randomRegex)
-//        try {
-//            folder.getProperties().remove(property)
-//            folder.addProperty(newProperty)
-//            println "[INFO] : Scheduling : ${folder.fullName}..." + new Date()
-//            def build = folder.scheduleBuild2(0).getFuture().get()
-//            println "[INFO] : ${build.result} - duration: ${build.durationString}"
-//            processMultiBranchJobs(folder)
-//        } finally {
-//            println "[INFO] : Reinstating original NoTriggerOrganizationFolderProperty values for ${folder.fullName}..." + new Date()
-//            folder.getProperties().remove(newProperty)
-//            folder.addProperty(property)
-//        }
-//    //}
-//}
-
-//@NonCPS
-//void processMultiBranchJobs(def folder) {
-//    println "[INFO MB] : Processing the Multibranch jobs..."
-//    def folderItems = Jenkins.instance.getAllItems(WorkflowMultiBranchProject.class)
-//    folderItems.each {
-//        if (it.fullName.startsWith(folder.fullName)) {
-//            println "[INFO MB] : Scheduling : ${it.fullName}..." + new Date()
-//            def build = it.scheduleBuild2(0).getFuture().get()
-//            println "[INFO MB] : ${build.result} - duration: ${build.durationString}"
-//            copyHashes(it.jobsDir)
-//        }
-//    }
-//}
-//
-//@NonCPS
-//def copyHashes(File parentDir) {
-//    parentDir.traverse(type: groovy.io.FileType.FILES, nameFilter: ~/scm-last-seen-revision-hash.xml/) { source ->
-//        def dest = new File(source.parent, 'scm-revision-hash.xml')
-//        dest << source.text
-//        println "[INFO MB] : copied ${source} -> ${dest}"
-//    }
-//}
 
 @NonCPS
 def getMultiBranchItemNames(String folderFullName) {
@@ -137,13 +106,7 @@ void processMultiBranchJobs(String folderFullName) {
     getMultiBranchItemNames(folderFullName).each { multiBranchItemName ->
         def multiBranchItem = Jenkins.instance.getAllItems(WorkflowMultiBranchProject.class).find { it.fullName == multiBranchItemName}
         println "[INFO MB] : Scheduling : ${multiBranchItem.fullName}..." + new Date()
-        def buildFuture = multiBranchItem.scheduleBuild2(0).getFuture()
-        while (!buildFuture.isDone()) {
-            println "Waiting for the scan of '${multiBranchItem.fullName}' to finish..."
-            sleep 10
-        }
-        def build = buildFuture.get()
-        println "[INFO MB] : ${build.result} - duration: ${build.durationString}"
+        triggerScan(multiBranchItem, "[INFO MB]")
         copyHashes(multiBranchItem.jobsDir)
     }
 }
