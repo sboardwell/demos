@@ -36,11 +36,11 @@ def sanitizePropertyIfNeeded(def currentProperty) {
     return propertyToReinstate
 }
 
-//@NonCPS
+@NonCPS
 def triggerScan(def item, String infoPrefix = "[INFO]") {
     println "${infoPrefix} : Waiting for the scan of '${item.fullName}' to stop before scheduling..."
     while (item.isBuildBlocked()) {
-        sleep 1
+        Thread.sleep(1000) // sleep 1
         println "${infoPrefix} : Still waiting for the scan of '${item.fullName}' to stop before scheduling..."
     }
     println "${infoPrefix} : Scan stopped!"
@@ -50,7 +50,7 @@ def triggerScan(def item, String infoPrefix = "[INFO]") {
 
     println "${infoPrefix} : Waiting for the scan of '${item.fullName}' to start..."
     while(!item.isBuildBlocked()) {
-        sleep 1
+        Thread.sleep(1000) // sleep 1
         println "${infoPrefix} : Still waiting for the scan of '${item.fullName}' to start..."
     }
     println "${infoPrefix} : Scan started!"
@@ -58,12 +58,12 @@ def triggerScan(def item, String infoPrefix = "[INFO]") {
     println "${infoPrefix} : Scan the scan of '${item.fullName}' to start..."
     while(item.isBuildBlocked()) {
         println "${infoPrefix} : Waiting for the scan of '${item.fullName}' to stop..."
-        sleep 1
+        Thread.sleep(1000) // sleep 1
     }
     println "${infoPrefix} : Scan stop!"
 }
 
-//@NonCPS
+@NonCPS
 def processFolder(String folderFullName) {
     def folder = Jenkins.instance.getAllItems(OrganizationFolder.class).find { it.fullName == folderFullName}
     println "[INFO] : Checking ${folder.fullName}... "
