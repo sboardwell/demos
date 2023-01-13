@@ -23,6 +23,16 @@ def call() {
                     println "[INFO] : Still waiting for the scan of '${orgFolderName}' to stop before scheduling..."
                 }
                 println "[INFO] : Scan stopped! Scheduling the scan of '${orgFolderName}'..."
+
+                // get a list of all child projects which are not currently running a scan. This will
+                // - allow us to detect which child projects are running due to the intitial org folder scan
+                // - this in turn means we can skip rescanning those which had already started
+                def existingProjectsTriggeredByOrgScan = []
+                getMultiBranchItemNames(orgFolderName).each {
+                    if (!isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
+                        existingProjectsTriggeredByOrgScan << it.fullName
+                    }
+                }
                 scheduleBuild(orgFolderName, OrganizationFolder.class)
 
                 println "[INFO] : Waiting for the scan of '${orgFolderName}' to start..."
@@ -40,25 +50,33 @@ def call() {
                 // iterate through child projects
                 println "[INFO MB] : Processing the Multibranch jobs from folder '${orgFolderName}'..."
                 getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
-                    println "[INFO MB] : Waiting for the scan of '${multiBranchItemName}' to stop before scheduling..."
-                    while (isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
-                        sleep 1
-                        println "[INFO MB] : Still waiting for the scan of '${multiBranchItemName}' to stop before scheduling..."
+                    boolean scanWasRunning = false
+                    if (isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
+                        scanWasRunning = true
+                        println "[INFO MB] : Waiting for the scan of '${multiBranchItemName}' to stop before scheduling..."
+                        while (isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
+                            sleep 1
+                            println "[INFO MB] : Still waiting for the scan of '${multiBranchItemName}' to stop before scheduling..."
+                        }
                     }
-                    println "[INFO MB] : Scan stopped! Scheduling the scan of '${multiBranchItemName}'..."
-                    scheduleBuild(multiBranchItemName, WorkflowMultiBranchProject.class)
+                    if (scanWasRunning && existingProjectsTriggeredByOrgScan.contains(multiBranchItemName)) {
+                        println "[INFO MB] : Detected scan of '${multiBranchItemName}' due to upstream organisation scan. No need to reschedule..."
+                    } else {
+                        println "[INFO MB] : Scan stopped! Scheduling the scan of '${multiBranchItemName}'..."
+                        scheduleBuild(multiBranchItemName, WorkflowMultiBranchProject.class)
 
-                    println "[INFO MB] : Waiting for the scan of '${multiBranchItemName}' to start..."
-                    while(!isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
-                        sleep 1
-                        println "[INFO MB] : Still waiting for the scan of '${multiBranchItemName}' to start..."
+                        println "[INFO MB] : Waiting for the scan of '${multiBranchItemName}' to start..."
+                        while(!isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
+                            sleep 1
+                            println "[INFO MB] : Still waiting for the scan of '${multiBranchItemName}' to start..."
+                        }
+                        println "[INFO MB] : Scan started! Waiting until it stops..."
+                        while(isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
+                            println "[INFO MB] : Still waiting for the scan of '${multiBranchItemName}' to stop..."
+                            sleep 1
+                        }
+                        println "[INFO MB] : Scan stopped!"
                     }
-                    println "[INFO MB] : Scan started! Waiting until it stops..."
-                    while(isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
-                        println "[INFO MB] : Still waiting for the scan of '${multiBranchItemName}' to stop..."
-                        sleep 1
-                    }
-                    println "[INFO MB] : Scan stopped!"
 
                     copyHashes(multiBranchItemName, WorkflowMultiBranchProject.class)
                 }
