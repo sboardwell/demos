@@ -54,14 +54,17 @@ def call() {
                     boolean scanWasRunning = false
                     if (isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
                         scanWasRunning = true
-                        println "[INFO MB] : Waiting for the scan of '${multiBranchItemName}' to stop before scheduling..."
+                        if (!existingProjectsAlreadyRunning.contains(multiBranchItemName)) {
+                            println "[INFO MB] : Detected scan of '${multiBranchItemName}' due to upstream organisation scan. No need to reschedule after scan has completed..."
+                        }
+                        println "[INFO MB] : Waiting for the scan of '${multiBranchItemName}' to stop..."
                         while (isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
                             sleep 1
-                            println "[INFO MB] : Still waiting for the scan of '${multiBranchItemName}' to stop before scheduling..."
+                            println "[INFO MB] : Still waiting for the scan of '${multiBranchItemName}' to stop..."
                         }
                     }
                     if (scanWasRunning && !existingProjectsAlreadyRunning.contains(multiBranchItemName)) {
-                        println "[INFO MB] : Detected scan of '${multiBranchItemName}' due to upstream organisation scan. No need to reschedule..."
+                        println "[INFO MB] : Scan '${multiBranchItemName}' above caused by the upstream organisation scan. No need to reschedule..."
                     } else {
                         println "[INFO MB] : Scan stopped! Scheduling the scan of '${multiBranchItemName}'..."
                         scheduleBuild(multiBranchItemName, WorkflowMultiBranchProject.class)
