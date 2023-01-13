@@ -28,7 +28,7 @@ def call() {
                 // - allow us to detect which child projects are running due to the intitial org folder scan
                 // - this in turn means we can skip rescanning those which had already started
                 def existingProjectsTriggeredByOrgScan = []
-                getMultiBranchItemNames(orgFolderName).each {
+                getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
                     if (!isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
                         existingProjectsTriggeredByOrgScan << it.fullName
                     }
