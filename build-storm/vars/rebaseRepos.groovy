@@ -30,9 +30,10 @@ def call() {
                 def existingProjectsTriggeredByOrgScan = []
                 getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
                     if (!isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
-                        existingProjectsTriggeredByOrgScan << multiBranchItemName.fullName
+                        existingProjectsTriggeredByOrgScan << multiBranchItemName
                     }
                 }
+                println "[INFO] : Child projects detected: ${existingProjectsTriggeredByOrgScan}"
                 scheduleBuild(orgFolderName, OrganizationFolder.class)
 
                 println "[INFO] : Waiting for the scan of '${orgFolderName}' to start..."
