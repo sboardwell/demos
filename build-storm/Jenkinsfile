@@ -1,1 +1,1 @@
-stage('rebase-repos') { steps { rebaseRepos() } }
+stage('rebase-repos') { rebaseRepos() }
