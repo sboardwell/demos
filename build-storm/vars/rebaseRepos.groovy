@@ -27,13 +27,13 @@ def call() {
                 // get a list of all child projects which are not currently running a scan. This will
                 // - allow us to detect which child projects are running due to the intitial org folder scan
                 // - this in turn means we can skip rescanning those which had already started
-                def existingProjectsTriggeredByOrgScan = []
+                def existingProjectsAlreadyRunning = []
                 getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
-                    if (!isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
-                        existingProjectsTriggeredByOrgScan << multiBranchItemName
+                    if (isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
+                        existingProjectsAlreadyRunning << multiBranchItemName
                     }
                 }
-                println "[INFO] : Child projects detected: ${existingProjectsTriggeredByOrgScan}"
+                println "[INFO] : Child projects detected: ${existingProjectsAlreadyRunning}"
                 scheduleBuild(orgFolderName, OrganizationFolder.class)
 
                 println "[INFO] : Waiting for the scan of '${orgFolderName}' to start..."
@@ -60,7 +60,7 @@ def call() {
                             println "[INFO MB] : Still waiting for the scan of '${multiBranchItemName}' to stop before scheduling..."
                         }
                     }
-                    if (scanWasRunning && existingProjectsTriggeredByOrgScan.contains(multiBranchItemName)) {
+                    if (scanWasRunning && !existingProjectsAlreadyRunning.contains(multiBranchItemName)) {
                         println "[INFO MB] : Detected scan of '${multiBranchItemName}' due to upstream organisation scan. No need to reschedule..."
                     } else {
                         println "[INFO MB] : Scan stopped! Scheduling the scan of '${multiBranchItemName}'..."
