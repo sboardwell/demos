@@ -174,10 +174,12 @@ def getMultiBranchItemNames(String folderFullName) {
 
 @NonCPS
 def copyHashes(def jobName, def clazz) {
+    def lines = []
     def parentDir = getItem(jobName, clazz).jobsDir
     parentDir.traverse(type: groovy.io.FileType.FILES, nameFilter: ~/scm-last-seen-revision-hash.xml/) { source ->
         def dest = new File(source.parent, 'scm-revision-hash.xml')
         dest << source.text
-        println "[INFO MB] : copied ${source} -> ${dest}"
+        lines << "${source} -> ${dest}"
     }
+    println "[INFO MB] : copied source -> dest...\n${lines.join('\n')}"
 }
