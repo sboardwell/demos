@@ -75,7 +75,7 @@ def call() {
                 // Now wait until all scans have finished...
                 while(waitForPreOrgScanToFinish || waitForPostOrgScanToFinish) {
                     sleep 5
-                    println "[INFO MB] : Waiting for the scans of to stop (preOrgScan = ${waitForPreOrgScanToFinish.size()}, postOrgScan = ${waitForPreOrgScanToFinish.size()}, finished = ${scanFinished.size()})."
+                    println "[INFO MB] : Waiting for the scans of to stop (preOrgScan = ${waitForPreOrgScanToFinish.size()}, postOrgScan = ${waitForPostOrgScanToFinish.size()}, finished = ${scanFinished.size()})."
                     getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
                         if (!isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
                             if (preOrgScans.contains(multiBranchItemName)) {
