@@ -83,7 +83,7 @@ def call() {
                                 waitForPreOrgScanToFinish.remove(multiBranchItemName)
                                 waitForPostOrgScanToFinish << multiBranchItemName
                                 scheduleBuild(multiBranchItemName, WorkflowMultiBranchProject.class)
-                            } else {
+                            } else if (postOrgScans.contains(multiBranchItemName)) {
                                 println "[INFO MB] : Final scan has finished for '${multiBranchItemName}'. Copying hashes..."
                                 waitForPostOrgScanToFinish.remove(multiBranchItemName)
                                 scanFinished << multiBranchItemName
