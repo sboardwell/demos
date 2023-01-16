@@ -78,12 +78,12 @@ def call() {
                     println "[INFO MB] : Waiting for the scans of to stop (preOrgScan = ${waitForPreOrgScanToFinish.size()}, postOrgScan = ${waitForPostOrgScanToFinish.size()}, finished = ${scanFinished.size()})."
                     getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
                         if (!isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
-                            if (preOrgScans.contains(multiBranchItemName)) {
+                            if (waitForPreOrgScanToFinish.contains(multiBranchItemName)) {
                                 println "[INFO MB] : Pre org scan build finished for '${multiBranchItemName}'. Starting final official scan..."
                                 waitForPreOrgScanToFinish.remove(multiBranchItemName)
                                 waitForPostOrgScanToFinish << multiBranchItemName
                                 scheduleBuild(multiBranchItemName, WorkflowMultiBranchProject.class)
-                            } else if (postOrgScans.contains(multiBranchItemName)) {
+                            } else if (waitForPostOrgScanToFinish.contains(multiBranchItemName)) {
                                 println "[INFO MB] : Final scan has finished for '${multiBranchItemName}'. Copying hashes..."
                                 waitForPostOrgScanToFinish.remove(multiBranchItemName)
                                 scanFinished << multiBranchItemName
