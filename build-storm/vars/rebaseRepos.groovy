@@ -37,15 +37,17 @@ def call() {
                 println "[INFO] : Child projects detected (project -> scanRunning): ${preOrgScans}"
                 scheduleBuild(orgFolderName, OrganizationFolder.class)
 
-                println "[INFO] : Waiting for the scan of '${orgFolderName}' to start..."
-                while(!isBuildBlocked(orgFolderName, OrganizationFolder.class)) {
-                    sleep 1
-                    println "[INFO] : Still waiting for the scan of '${orgFolderName}' to start..."
+                timeout(10) {
+                    println "[INFO] : Waiting for the scan of '${orgFolderName}' to start..."
+                    while(!isBuildBlocked(orgFolderName, OrganizationFolder.class)) {
+                        sleep 5
+                        println "[INFO] : Still waiting for the scan of '${orgFolderName}' to start..."
+                    }
                 }
                 println "[INFO] : Scan started! Waiting until it stops..."
                 while(isBuildBlocked(orgFolderName, OrganizationFolder.class)) {
                     println "[INFO] : Still waiting for the scan of '${orgFolderName}' to stop..."
-                    sleep 1
+                    sleep 5
                 }
                 println "[INFO] : Scan stopped!"
 
