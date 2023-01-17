@@ -1,5 +1,7 @@
 import jenkins.branch.*
 import org.jenkinsci.plugins.workflow.multibranch.*
+import java.time.LocalDateTime
+import java.time.Duration
 
 def call(def args = [:]) {
     // configurable properties
@@ -7,6 +9,7 @@ def call(def args = [:]) {
     int timeoutStartOrgScanInMinutes = args.timeoutStartOrgScanInMinutes ? Integer.parseInteger(args.timeoutStartOrgScanInMinutes) : 10
     int timeoutAllScansCompletedInHours = args.timeoutAllScansCompletedInHours ? Integer.parseInteger(args.timeoutAllScansCompletedInHours) : 2
 
+    def summary = []
     getFolderItemNamesAndNoTriggerProperty().each { orgFolderName, currentProperty ->
         if (shouldProcessFolder(currentProperty.getBranches(), orgFolderName)) {
             def propertyToReinstate = sanitizePropertyIfNeeded(currentProperty)
@@ -41,6 +44,7 @@ def call(def args = [:]) {
                         }
                     }
                     println "[INFO] : Child projects detected (project -> scanRunning): ${preOrgScans}"
+                    def orgScanStart = LocalDateTime.now()
                     scheduleBuild(orgFolderName, OrganizationFolder.class)
 
                     timeout(10) {
@@ -55,6 +59,7 @@ def call(def args = [:]) {
                         println "[INFO] : Still waiting for the scan of '${orgFolderName}' to stop..."
                         sleep sleepIntervalInSeconds
                     }
+                    addSummary(summary, orgFolderName, orgScanStart, LocalDateTime.now())
                     println "[INFO] : Scan stopped!"
 
                     // iterate through child projects and categorise
@@ -79,7 +84,9 @@ def call(def args = [:]) {
                     }
 
                     // Now wait until all scans have finished...
+                    def childScanTimes = [:]
                     while(waitForPreOrgScanToFinish || waitForPostOrgScanToFinish) {
+                        childScanTimes.put(multiBranchItemName, LocalDateTime.now())
                         sleep sleepIntervalInSeconds
                         println "[INFO MB] : Waiting for the scans of to stop (preOrgScan = ${waitForPreOrgScanToFinish.size()}, postOrgScan = ${waitForPostOrgScanToFinish.size()}, finished = ${scanFinished.size()})."
                         getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
@@ -93,7 +100,8 @@ def call(def args = [:]) {
                                     println "[INFO MB] : Final scan has finished for '${multiBranchItemName}'. Copying hashes..."
                                     waitForPostOrgScanToFinish.remove(multiBranchItemName)
                                     scanFinished << multiBranchItemName
-                                    copyHashes(multiBranchItemName, WorkflowMultiBranchProject.class)
+                                    def hashesCopied = copyHashes(multiBranchItemName, WorkflowMultiBranchProject.class)
+                                    addSummary(summary, multiBranchItemName, childScanTimes.get(multiBranchItemName), LocalDateTime.now(), hashesCopied)
                                 }
                             } else {
                                 println "[INFO MB] : Scan still running for '${multiBranchItemName}'."
@@ -107,7 +115,19 @@ def call(def args = [:]) {
             }
         }
     }
+    println "Build Summary:\n${summary.join('\n')}"
 }
+
+@NonCPS
+def addSummary(def summary, String itemName, LocalDateTime start, LocalDateTime stop, def hashesCopiedSuffix == '') {
+    summary << "Item '${itemName}' scan started at ${start}."
+    summary << "Item '${itemName}' scan stopped at ${stop} (approximate duration: ${Duration.between(start, stop).getSeconds()} seconds)"
+    if (hashesCopied) {
+        summary << "Item '${itemName}' hashes copied: ${hashesCopied}"
+    }
+
+}
+
 
 @NonCPS
 def getItem(def fullName, def clazz) {
@@ -189,4 +209,5 @@ def copyHashes(def jobName, def clazz) {
         lines << "${source} -> ${dest}"
     }
     println "[INFO MB] : copied source -> dest...\n${lines.join('\n')}"
+    return lines.size()
 }
