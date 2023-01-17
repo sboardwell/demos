@@ -71,7 +71,7 @@ def call(def args = [:]) {
                     getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
                         if (isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
                             if (preOrgScans.contains(multiBranchItemName)) {
-                                println "[INFO MB] : Previosuly running scan detected for '${multiBranchItemName}'. Will restart after this has finished."
+                                println "[INFO MB] : Previously running scan detected for '${multiBranchItemName}'. Will restart after this has finished."
                                 waitForPreOrgScanToFinish << multiBranchItemName
                             } else {
                                 println "[INFO MB] : Freshly started scan detected for '${multiBranchItemName}' due to upstream organisation scan."
