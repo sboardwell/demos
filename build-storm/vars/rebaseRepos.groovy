@@ -43,7 +43,7 @@ def call(def args = [:]) {
                             preOrgScans << multiBranchItemName
                         }
                     }
-                    println "[INFO] : Child projects detected (project -> scanRunning): ${preOrgScans}"
+                    println "[INFO] : Child projects detected where project scan already running pre org scan: ${preOrgScans}"
                     def orgScanStart = LocalDateTime.now()
                     scheduleBuild(orgFolderName, OrganizationFolder.class)
 
