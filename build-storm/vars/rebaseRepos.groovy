@@ -66,6 +66,7 @@ def call(def args = [:]) {
                     def waitForPreOrgScanToFinish = []
                     def waitForPostOrgScanToFinish = []
                     def scanFinished = []
+                    def childScanTimes = [:]
                     println "[INFO MB] : Processing the Multibranch jobs from folder '${orgFolderName}'..."
                     getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
                         if (isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
@@ -86,7 +87,6 @@ def call(def args = [:]) {
                     }
 
                     // Now wait until all scans have finished...
-                    def childScanTimes = [:]
                     while(waitForPreOrgScanToFinish || waitForPostOrgScanToFinish) {
                         sleep sleepIntervalInSeconds
                         println "[INFO MB] : Waiting for the scans of to stop (preOrgScan = ${waitForPreOrgScanToFinish.size()}, postOrgScan = ${waitForPostOrgScanToFinish.size()}, finished = ${scanFinished.size()})."
