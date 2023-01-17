@@ -74,11 +74,13 @@ def call(def args = [:]) {
                                 waitForPreOrgScanToFinish << multiBranchItemName
                             } else {
                                 println "[INFO MB] : Freshly started scan detected for '${multiBranchItemName}' due to upstream organisation scan."
+                                childScanTimes.put(multiBranchItemName, orgScanStart) // using orgScanStart since it was trigger around that time
                                 waitForPostOrgScanToFinish << multiBranchItemName
                             }
                         } else {
                             println "[INFO MB] : No scan has been detected for '${multiBranchItemName}'. Will start one and wait for completion."
                             scheduleBuild(multiBranchItemName, WorkflowMultiBranchProject.class)
+                            childScanTimes.put(multiBranchItemName, LocalDateTime.now())
                             waitForPostOrgScanToFinish << multiBranchItemName
                         }
                     }
@@ -89,13 +91,13 @@ def call(def args = [:]) {
                         sleep sleepIntervalInSeconds
                         println "[INFO MB] : Waiting for the scans of to stop (preOrgScan = ${waitForPreOrgScanToFinish.size()}, postOrgScan = ${waitForPostOrgScanToFinish.size()}, finished = ${scanFinished.size()})."
                         getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
-                            childScanTimes.put(multiBranchItemName, LocalDateTime.now())
                             if (!isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
                                 if (waitForPreOrgScanToFinish.contains(multiBranchItemName)) {
                                     println "[INFO MB] : Pre org scan build finished for '${multiBranchItemName}'. Starting final official scan..."
                                     waitForPreOrgScanToFinish.remove(multiBranchItemName)
                                     waitForPostOrgScanToFinish << multiBranchItemName
                                     scheduleBuild(multiBranchItemName, WorkflowMultiBranchProject.class)
+                                    childScanTimes.put(multiBranchItemName, LocalDateTime.now())
                                 } else if (waitForPostOrgScanToFinish.contains(multiBranchItemName)) {
                                     println "[INFO MB] : Final scan has finished for '${multiBranchItemName}'. Copying hashes..."
                                     waitForPostOrgScanToFinish.remove(multiBranchItemName)
