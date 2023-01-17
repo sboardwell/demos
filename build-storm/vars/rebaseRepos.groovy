@@ -119,7 +119,7 @@ def call(def args = [:]) {
 }
 
 @NonCPS
-def addSummary(def summary, String itemName, LocalDateTime start, LocalDateTime stop, def hashesCopiedSuffix == '') {
+def addSummary(def summary, String itemName, LocalDateTime start, LocalDateTime stop, def hashesCopiedSuffix = '') {
     summary << "Item '${itemName}' scan started at ${start}."
     summary << "Item '${itemName}' scan stopped at ${stop} (approximate duration: ${Duration.between(start, stop).getSeconds()} seconds)"
     if (hashesCopied) {
