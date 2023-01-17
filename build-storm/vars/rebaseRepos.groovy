@@ -1,7 +1,12 @@
 import jenkins.branch.*
 import org.jenkinsci.plugins.workflow.multibranch.*
 
-def call() {
+def call(def args = [:]) {
+    // configurable properties
+    int sleepIntervalInSeconds = args.sleepIntervalInSeconds ? Integer.parseInteger(args.sleepIntervalInSeconds) : 5
+    int timeoutStartOrgScanInMinutes = args.timeoutStartOrgScanInMinutes ? Integer.parseInteger(args.timeoutStartOrgScanInMinutes) : 10
+    int timeoutAllScansCompletedInHours = args.timeoutAllScansCompletedInHours ? Integer.parseInteger(args.timeoutAllScansCompletedInHours) : 2
+
     getFolderItemNamesAndNoTriggerProperty().each { orgFolderName, currentProperty ->
         if (shouldProcessFolder(currentProperty.getBranches(), orgFolderName)) {
             def propertyToReinstate = sanitizePropertyIfNeeded(currentProperty)
@@ -12,85 +17,87 @@ def call() {
                 [INFO] : Regex to reinstate : ${propertyToReinstate.getBranches()}
                 """.stripIndent()
             try {
-                // set temp regex
-                println "[INFO] : Setting temporary NoTriggerOrganizationFolderProperty values for ${orgFolderName}... " + new Date()
-                replaceNoTriggerProperty(orgFolderName, currentProperty, tempProperty)
+                timeout(time: timeoutAllScansCompletedInHours, unit: 'HOURS') {
+                    // set temp regex
+                    println "[INFO] : Setting temporary NoTriggerOrganizationFolderProperty values for ${orgFolderName}... " + new Date()
+                    replaceNoTriggerProperty(orgFolderName, currentProperty, tempProperty)
 
-                // trigger org folder scan
-                println "[INFO] : Waiting for the scan of '${orgFolderName}' to stop before scheduling..."
-                while (isBuildBlocked(orgFolderName, OrganizationFolder.class)) {
-                    sleep 1
-                    println "[INFO] : Still waiting for the scan of '${orgFolderName}' to stop before scheduling..."
-                }
-                println "[INFO] : Scan stopped! Scheduling the scan of '${orgFolderName}'..."
-
-                // get a list of all child projects which are currently running a scan pre org scan.
-                // This will:
-                // - allow us to detect which child projects are running due to the intitial org folder scan
-                // - in turn, this means we can skip rescanning those which had already started
-                def preOrgScans = []
-                getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
-                    if (isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
-                        preOrgScans << multiBranchItemName
+                    // trigger org folder scan
+                    println "[INFO] : Waiting for the scan of '${orgFolderName}' to stop before scheduling..."
+                    while (isBuildBlocked(orgFolderName, OrganizationFolder.class)) {
+                        sleep sleepIntervalInSeconds
+                        println "[INFO] : Still waiting for the scan of '${orgFolderName}' to stop before scheduling..."
                     }
-                }
-                println "[INFO] : Child projects detected (project -> scanRunning): ${preOrgScans}"
-                scheduleBuild(orgFolderName, OrganizationFolder.class)
+                    println "[INFO] : Scan stopped! Scheduling the scan of '${orgFolderName}'..."
 
-                timeout(10) {
-                    println "[INFO] : Waiting for the scan of '${orgFolderName}' to start..."
-                    while(!isBuildBlocked(orgFolderName, OrganizationFolder.class)) {
-                        sleep 5
-                        println "[INFO] : Still waiting for the scan of '${orgFolderName}' to start..."
-                    }
-                }
-                println "[INFO] : Scan started! Waiting until it stops..."
-                while(isBuildBlocked(orgFolderName, OrganizationFolder.class)) {
-                    println "[INFO] : Still waiting for the scan of '${orgFolderName}' to stop..."
-                    sleep 5
-                }
-                println "[INFO] : Scan stopped!"
-
-                // iterate through child projects and categorise
-                def waitForPreOrgScanToFinish = []
-                def waitForPostOrgScanToFinish = []
-                def scanFinished = []
-                println "[INFO MB] : Processing the Multibranch jobs from folder '${orgFolderName}'..."
-                getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
-                    if (isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
-                        if (preOrgScans.contains(multiBranchItemName)) {
-                            println "[INFO MB] : Previosuly running scan detected for '${multiBranchItemName}'. Will restart after this has finished."
-                            waitForPreOrgScanToFinish << multiBranchItemName
-                        } else {
-                            println "[INFO MB] : Freshly started scan detected for '${multiBranchItemName}' due to upstream organisation scan."
-                            waitForPostOrgScanToFinish << multiBranchItemName
-                        }
-                    } else {
-                        println "[INFO MB] : No scan has been detected for '${multiBranchItemName}'. Will start one and wait for completion."
-                        scheduleBuild(multiBranchItemName, WorkflowMultiBranchProject.class)
-                        waitForPostOrgScanToFinish << multiBranchItemName
-                    }
-                }
-
-                // Now wait until all scans have finished...
-                while(waitForPreOrgScanToFinish || waitForPostOrgScanToFinish) {
-                    sleep 5
-                    println "[INFO MB] : Waiting for the scans of to stop (preOrgScan = ${waitForPreOrgScanToFinish.size()}, postOrgScan = ${waitForPostOrgScanToFinish.size()}, finished = ${scanFinished.size()})."
+                    // get a list of all child projects which are currently running a scan pre org scan.
+                    // This will:
+                    // - allow us to detect which child projects are running due to the intitial org folder scan
+                    // - in turn, this means we can skip rescanning those which had already started
+                    def preOrgScans = []
                     getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
-                        if (!isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
-                            if (waitForPreOrgScanToFinish.contains(multiBranchItemName)) {
-                                println "[INFO MB] : Pre org scan build finished for '${multiBranchItemName}'. Starting final official scan..."
-                                waitForPreOrgScanToFinish.remove(multiBranchItemName)
+                        if (isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
+                            preOrgScans << multiBranchItemName
+                        }
+                    }
+                    println "[INFO] : Child projects detected (project -> scanRunning): ${preOrgScans}"
+                    scheduleBuild(orgFolderName, OrganizationFolder.class)
+
+                    timeout(10) {
+                        println "[INFO] : Waiting for the scan of '${orgFolderName}' to start..."
+                        while(!isBuildBlocked(orgFolderName, OrganizationFolder.class)) {
+                            sleep sleepIntervalInSeconds
+                            println "[INFO] : Still waiting for the scan of '${orgFolderName}' to start..."
+                        }
+                    }
+                    println "[INFO] : Scan started! Waiting until it stops..."
+                    while(isBuildBlocked(orgFolderName, OrganizationFolder.class)) {
+                        println "[INFO] : Still waiting for the scan of '${orgFolderName}' to stop..."
+                        sleep sleepIntervalInSeconds
+                    }
+                    println "[INFO] : Scan stopped!"
+
+                    // iterate through child projects and categorise
+                    def waitForPreOrgScanToFinish = []
+                    def waitForPostOrgScanToFinish = []
+                    def scanFinished = []
+                    println "[INFO MB] : Processing the Multibranch jobs from folder '${orgFolderName}'..."
+                    getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
+                        if (isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
+                            if (preOrgScans.contains(multiBranchItemName)) {
+                                println "[INFO MB] : Previosuly running scan detected for '${multiBranchItemName}'. Will restart after this has finished."
+                                waitForPreOrgScanToFinish << multiBranchItemName
+                            } else {
+                                println "[INFO MB] : Freshly started scan detected for '${multiBranchItemName}' due to upstream organisation scan."
                                 waitForPostOrgScanToFinish << multiBranchItemName
-                                scheduleBuild(multiBranchItemName, WorkflowMultiBranchProject.class)
-                            } else if (waitForPostOrgScanToFinish.contains(multiBranchItemName)) {
-                                println "[INFO MB] : Final scan has finished for '${multiBranchItemName}'. Copying hashes..."
-                                waitForPostOrgScanToFinish.remove(multiBranchItemName)
-                                scanFinished << multiBranchItemName
-                                copyHashes(multiBranchItemName, WorkflowMultiBranchProject.class)
                             }
                         } else {
-                            println "[INFO MB] : Scan still running for '${multiBranchItemName}'."
+                            println "[INFO MB] : No scan has been detected for '${multiBranchItemName}'. Will start one and wait for completion."
+                            scheduleBuild(multiBranchItemName, WorkflowMultiBranchProject.class)
+                            waitForPostOrgScanToFinish << multiBranchItemName
+                        }
+                    }
+
+                    // Now wait until all scans have finished...
+                    while(waitForPreOrgScanToFinish || waitForPostOrgScanToFinish) {
+                        sleep sleepIntervalInSeconds
+                        println "[INFO MB] : Waiting for the scans of to stop (preOrgScan = ${waitForPreOrgScanToFinish.size()}, postOrgScan = ${waitForPostOrgScanToFinish.size()}, finished = ${scanFinished.size()})."
+                        getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
+                            if (!isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
+                                if (waitForPreOrgScanToFinish.contains(multiBranchItemName)) {
+                                    println "[INFO MB] : Pre org scan build finished for '${multiBranchItemName}'. Starting final official scan..."
+                                    waitForPreOrgScanToFinish.remove(multiBranchItemName)
+                                    waitForPostOrgScanToFinish << multiBranchItemName
+                                    scheduleBuild(multiBranchItemName, WorkflowMultiBranchProject.class)
+                                } else if (waitForPostOrgScanToFinish.contains(multiBranchItemName)) {
+                                    println "[INFO MB] : Final scan has finished for '${multiBranchItemName}'. Copying hashes..."
+                                    waitForPostOrgScanToFinish.remove(multiBranchItemName)
+                                    scanFinished << multiBranchItemName
+                                    copyHashes(multiBranchItemName, WorkflowMultiBranchProject.class)
+                                }
+                            } else {
+                                println "[INFO MB] : Scan still running for '${multiBranchItemName}'."
+                            }
                         }
                     }
                 }
