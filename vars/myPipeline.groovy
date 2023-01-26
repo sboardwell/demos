@@ -7,20 +7,16 @@ def call() {
 
   if(shouldTest) {
       stage('Test') {
-        steps {
             echoMe()
           echo "hello"
             echoMe('Fred Special')
-        }
       }
   }
   if(shouldBuild) {
       stage('Test') {
-        steps {
             echoMe()
           echo "hello"
             echoMe('Fred Special')
-        }
       }
   }
 }
