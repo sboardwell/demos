@@ -13,7 +13,7 @@ def call() {
       }
   }
   if(shouldBuild) {
-      stage('Test') {
+      stage('Build') {
             echoMe()
           echo "hello"
             echoMe('Fred Special')
