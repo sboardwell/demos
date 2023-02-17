@@ -4,3 +4,5 @@ H/2 * * * * %ENV=first
 H/3 * * * * %ENV=second
 # third cron
 H/3 * * * * %ENV=third
+# fourth cron
+H/4 * * * * %ENV=fourth
