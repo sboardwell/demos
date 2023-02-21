@@ -1,7 +1,6 @@
 import jenkins.branch.*
 import org.jenkinsci.plugins.workflow.multibranch.*
-import java.time.LocalDateTime
-import java.time.Duration
+import static groovy.json.JsonOutput.*
 
 def call(def args = [:]) {
     // configurable properties
@@ -9,7 +8,6 @@ def call(def args = [:]) {
     int timeoutStartOrgScanInMinutes = args.timeoutStartOrgScanInMinutes ? Integer.parseInteger(args.timeoutStartOrgScanInMinutes) : 10
     int timeoutAllScansCompletedInHours = args.timeoutAllScansCompletedInHours ? Integer.parseInteger(args.timeoutAllScansCompletedInHours) : 2
 
-    def summary = []
     getFolderItemNamesAndNoTriggerProperty().each { orgFolderName, currentProperty ->
         if (shouldProcessFolder(currentProperty.getBranches(), orgFolderName)) {
             def propertyToReinstate = sanitizePropertyIfNeeded(currentProperty)
@@ -33,18 +31,6 @@ def call(def args = [:]) {
                     }
                     println "[INFO] : Scan stopped! Scheduling the scan of '${orgFolderName}'..."
 
-                    // get a list of all child projects which are currently running a scan pre org scan.
-                    // This will:
-                    // - allow us to detect which child projects are running due to the intitial org folder scan
-                    // - in turn, this means we can skip rescanning those which had already started
-                    def preOrgScans = []
-                    getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
-                        if (isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
-                            preOrgScans << multiBranchItemName
-                        }
-                    }
-                    println "[INFO] : Child projects detected where project scan already running pre org scan: ${preOrgScans}"
-                    def orgScanStart = LocalDateTime.now()
                     scheduleBuild(orgFolderName, OrganizationFolder.class)
 
                     timeout(10) {
@@ -54,61 +40,24 @@ def call(def args = [:]) {
                             println "[INFO] : Still waiting for the scan of '${orgFolderName}' to start..."
                         }
                     }
-                    println "[INFO] : Scan started! Waiting until it stops..."
-                    while(isBuildBlocked(orgFolderName, OrganizationFolder.class)) {
-                        println "[INFO] : Still waiting for the scan of '${orgFolderName}' to stop..."
-                        sleep sleepIntervalInSeconds
-                    }
-                    addSummary(summary, orgFolderName, orgScanStart, LocalDateTime.now())
-                    println "[INFO] : Scan stopped!"
+                    println "[INFO] : Scan started! Processing..."
 
-                    // iterate through child projects and categorise
-                    def waitForPreOrgScanToFinish = []
-                    def waitForPostOrgScanToFinish = []
-                    def scanFinished = []
-                    def childScanTimes = [:]
-                    println "[INFO MB] : Processing the Multibranch jobs from folder '${orgFolderName}'..."
-                    getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
-                        if (isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
-                            if (preOrgScans.contains(multiBranchItemName)) {
-                                println "[INFO MB] : Previously running scan detected for '${multiBranchItemName}'. Will restart after this has finished."
-                                waitForPreOrgScanToFinish << multiBranchItemName
-                            } else {
-                                println "[INFO MB] : Freshly started scan detected for '${multiBranchItemName}' due to upstream organisation scan."
-                                childScanTimes.put(multiBranchItemName, orgScanStart) // using orgScanStart since it was trigger around that time
-                                waitForPostOrgScanToFinish << multiBranchItemName
-                            }
-                        } else {
-                            println "[INFO MB] : No scan has been detected for '${multiBranchItemName}'. Will start one and wait for completion."
+                    def result = [jobName: orgFolderName]
+                    while (!result.processed) {
+                        parseOrgLogFile(result)
+                        // check for scans not triggered...
+                        result.manualScan?.each { multiBranchItemName ->
+                            println "[INFO] : Branch indexing not automatically triggered for '${multiBranchItemName}'. Triggering manually..."
                             scheduleBuild(multiBranchItemName, WorkflowMultiBranchProject.class)
-                            childScanTimes.put(multiBranchItemName, LocalDateTime.now())
-                            waitForPostOrgScanToFinish << multiBranchItemName
+                        }
+                        result.manualScan = []
+                        if (!result.processed) {
+                            sleep sleepIntervalInSeconds
                         }
                     }
-
-                    // Now wait until all scans have finished...
-                    while(waitForPreOrgScanToFinish || waitForPostOrgScanToFinish) {
-                        sleep sleepIntervalInSeconds
-                        println "[INFO MB] : Waiting for the scans of to stop (preOrgScan = ${waitForPreOrgScanToFinish.size()}, postOrgScan = ${waitForPostOrgScanToFinish.size()}, finished = ${scanFinished.size()})."
-                        getMultiBranchItemNames(orgFolderName).each { multiBranchItemName ->
-                            if (!isBuildBlocked(multiBranchItemName, WorkflowMultiBranchProject.class)) {
-                                if (waitForPreOrgScanToFinish.contains(multiBranchItemName)) {
-                                    println "[INFO MB] : Pre org scan build finished for '${multiBranchItemName}'. Starting final official scan..."
-                                    waitForPreOrgScanToFinish.remove(multiBranchItemName)
-                                    waitForPostOrgScanToFinish << multiBranchItemName
-                                    scheduleBuild(multiBranchItemName, WorkflowMultiBranchProject.class)
-                                    childScanTimes.put(multiBranchItemName, LocalDateTime.now())
-                                } else if (waitForPostOrgScanToFinish.contains(multiBranchItemName)) {
-                                    println "[INFO MB] : Final scan has finished for '${multiBranchItemName}'. Copying hashes..."
-                                    waitForPostOrgScanToFinish.remove(multiBranchItemName)
-                                    scanFinished << multiBranchItemName
-                                    def hashesCopied = copyHashes(multiBranchItemName, WorkflowMultiBranchProject.class)
-                                    addSummary(summary, multiBranchItemName, childScanTimes.get(multiBranchItemName), LocalDateTime.now(), hashesCopied)
-                                }
-                            } else {
-                                println "[INFO MB] : Scan still running for '${multiBranchItemName}'."
-                            }
-                        }
+                    println prettyPrint(toJson(result))
+                    if (!result.summary.contains('Finished: SUCCESS')) {
+                        error "It seems the org scan did not complete successfully. Please check."
                     }
                 }
             } finally {
@@ -117,24 +66,127 @@ def call(def args = [:]) {
             }
         }
     }
-    println "Build Summary:\n${summary.join('\n')}"
 }
 
 @NonCPS
-def addSummary(def summary, String itemName, LocalDateTime start, LocalDateTime stop, def hashesCopied = '') {
-    summary << "Item '${itemName}' scan started at ${start}."
-    summary << "Item '${itemName}' scan stopped at ${stop} (approximate duration: ${Duration.between(start, stop).getSeconds()} seconds)"
-    if (hashesCopied) {
-        summary << "Item '${itemName}' hashes copied: ${hashesCopied}"
+def extractDate(def logFile, def regex) {
+    def logLines = logFile.readLines().grep(regex)
+    if (logLines) {
+        def logLine = logLines.first()
+        def logDateStr = logLine?.replace('[','').replaceAll('].*','')
+        if (logDateStr) {
+            return Date.parseToStringDate(logDateStr)
+        }
     }
+    return null
+}
 
+@NonCPS
+def parseOrgLogFile(def result) {
+    def INFO = "[INFO ORG - ${result.jobName}]"
+    def rootDir = getItem(result.jobName, OrganizationFolder.class).getRootDir()
+    def logFile = new File(rootDir, '/computation/computation.log')
+    if (logFile.exists()) {
+        println "${INFO} : Using log file '${logFile}'"
+
+        // start
+        result.start = extractDate(logFile, ~/^.*Starting organization scan.*/)
+
+        // stop
+        result.stop = extractDate(logFile, ~/^.*Finished organization scan.*/)
+
+        def summary = logFile.readLines().grep(~/^.*(Starting organization scan|Finished organization scan|Proposing|Finished examining|Finished: ).*$/)
+        result.summary = summary
+        println "${INFO} : Current scan summary..."
+        println prettyPrint(toJson(summary))
+
+        // examined repos
+        logFile.readLines().grep(~/^Proposing.*/).each {
+            result.examined = result.examined?: [:]
+            result.manualScan = result.manualScan?: []
+            if (!result.examined.containsKey(it)) {
+                String repoNameWithOrg = it.replaceAll('Proposing[ ]+', '')
+                String repoName = repoNameWithOrg.replaceAll('.*/', '')
+                String jobName = "${result.jobName}/${repoName}"
+                result.examined.put(it, [jobName: jobName])
+            }
+            def childResult = result.examined.get(it)
+            if (!childResult.processed) {
+                parseMultiBranchLogFile(childResult, result)
+            }
+        }
+
+        // processed
+        if (result.summary.any { it.startsWith('Finished: ') } ) {
+            // ensure all child repos have been correctly processed
+            boolean allProcessed = true
+            result.examined.each { childRepoLogStr, childRepo ->
+                if (!childRepo.processed) {
+                    allProcessed = false
+                }
+            }
+            result.processed = allProcessed
+        }
+    } else {
+        println "${INFO} : Ignoring since we can't find the log file."
+        result.processed = true
+    }
 }
 
 
 @NonCPS
-def getItem(def fullName, def clazz) {
+def parseMultiBranchLogFile(def result, def orgResult) {
+    // TODO remove:
+    boolean failOnMissingRepoJobs = false
+    def INFO = "[INFO MB - ${result.jobName}]"
+    def item = getItem(result.jobName, WorkflowMultiBranchProject.class, failOnMissingRepoJobs)
+    if (!item) {
+        if (orgResult.stop) {
+            println "${INFO} : WARNING - Item NOT found after org scan has finished. Assuming the criteria wasn't met and skipping."
+            result.processed = true
+        } else {
+            println "${INFO} : WARNING - Item NOT found but org scan still running. we'll wait..."
+        }
+        return
+    }
+    def rootDir = getItem(result.jobName, WorkflowMultiBranchProject.class).getRootDir()
+    def logFile = new File(rootDir, '/indexing/indexing.log')
+    if (logFile.exists()) {
+        println "${INFO} : Using log file '${logFile}'"
+
+        // start
+        result.start = extractDate(logFile, ~/^.*Starting branch indexing.*/)
+
+        // stop
+        result.stop = extractDate(logFile, ~/^.*Finished branch indexing.*/)
+
+        // sanity check
+        if (result.start.after(orgResult.start)) {
+            println "${INFO} : Sanity check OK - Scan (${result.start}) performed after the org scan (${orgResult.start})."
+            result.sanityCheck = 'OK'
+        } else {
+            println "${INFO} : Sanity check FAILED - Scan (${result.start}) performed before the org scan (${orgResult.start}). Triggering scan..."
+            result.sanityCheck = 'FAILED'
+            orgResult.manualScan << result.jobName
+            return
+        }
+
+        // processed
+        def summary = logFile.readLines().grep(~/^.*(Starting branch indexing|Finished branch indexing|were processed|Finished examining|Finished: ).*$/)
+        result.summary = summary
+        if (result.stop) {
+            result.processed = true
+            result.hashesCopied = copyHashes(result.jobName, WorkflowMultiBranchProject.class)
+            println "${INFO} : Repo processed. Summary below..."
+            println prettyPrint(toJson(result))
+        }
+    }
+}
+
+@NonCPS
+def getItem(def fullName, def clazz, boolean strict = true) {
     def item = Jenkins.instance.getAllItems(clazz).find { it.fullName == fullName}
-    if (item == null) {
+    if (item == null && strict) {
         error "Could not find item '${fullName}' of type '${clazz.name}'"
     }
     return item
@@ -165,7 +217,12 @@ def getFolderItemNamesAndNoTriggerProperty() {
     def folderItemNamesAndNoTriggerProperty = [:]
     folderItems.each {
         NoTriggerOrganizationFolderProperty currentProperty = it.getProperties().get(NoTriggerOrganizationFolderProperty.class)
-        folderItemNamesAndNoTriggerProperty.put(it.fullName, currentProperty)
+        if (currentProperty) {
+            println "[INFO] : adding NoTriggerOrganizationFolderProperty for ${it.fullName} = ${currentProperty}"
+            folderItemNamesAndNoTriggerProperty.put(it.fullName, currentProperty)
+        } else {
+            error "NoTriggerOrganizationFolderProperty for ${it.fullName} = ${currentProperty}"
+        }
     }
     return folderItemNamesAndNoTriggerProperty
 }
