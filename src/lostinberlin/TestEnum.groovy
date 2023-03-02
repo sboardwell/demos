@@ -7,13 +7,22 @@ public enum TestEnum {
  
     final String id;
     final String desc;
+    static final Map map;
+    static {
+        map = [:] as TreeMap
+        values().each{ color -> 
+            println "id: " + color.id + ", desc:" + color.desc
+            map.put(color.toString(), color)
+        }
+ 
+    }
+ 
+    public static valueOf( id ) {
+        map[id]
+    }
 
     private TestEnum(String id, String desc) {
         this.id = id;
         this.desc = desc;
-    }
-    
-    public static valueOf(String s) {
-        return super.valueOf(s)
     }
 }
