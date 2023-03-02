@@ -11,7 +11,6 @@ public enum TestEnum {
     static {
         map = [:]
         values().each{ color -> 
-            println "id: " + color.id + ", desc:" + color.desc
             map.put(color.toString(), color)
         }
  
