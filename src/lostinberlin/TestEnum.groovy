@@ -16,7 +16,7 @@ public enum TestEnum {
  
     }
  
-    public static valueOf( id ) {
+    public static valueOf(String id) {
         map[id]
     }
 
