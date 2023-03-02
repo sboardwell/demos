@@ -12,5 +12,8 @@ public enum TestEnum {
         this.id = id;
         this.desc = desc;
     }
- 
+    
+    public static valueOf(String s) {
+        return super.valueOf(s)
+    }
 }
