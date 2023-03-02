@@ -8,7 +8,7 @@ public enum TestEnum {
     final String id;
     final String desc;
 
-    private ColorEnum(String id, String desc) {
+    private TestEnum(String id, String desc) {
         this.id = id;
         this.desc = desc;
     }
