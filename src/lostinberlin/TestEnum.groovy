@@ -9,7 +9,7 @@ public enum TestEnum {
     final String desc;
     static final Map map;
     static {
-        map = [:] as TreeMap
+        map = [:]
         values().each{ color -> 
             println "id: " + color.id + ", desc:" + color.desc
             map.put(color.toString(), color)
