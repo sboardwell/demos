@@ -21,8 +21,14 @@ def call(def args, Closure body) {
       logStr << "NOT setting cloud to '${match.cloud}'. Already set to -> '${args.cloud}'"
     }
     if (!args.defaultContainer && match.defaultContainer) {
-      logStr << "Setting defaultContainer -> '${match.defaultContainer}'..."
-      args.defaultContainer = match.defaultContainer
+      // We cannot set the default container here so placing an env var for use later
+      // TODO - the code below is used in the node.groovy - place into a central util class
+      String stageDefaultContainerKey = "CUSTOM_DEFAULT_CONTAINER"
+      if (script.env.STAGE_NAME) {
+        stageDefaultContainerKey + "_${STAGE_NAME}".replaceAll("[^A-Za-z0-9]", "_").toUpperCase()
+      }
+      logStr << "Setting env.${stageDefaultContainerKey} = '${match.defaultContainer}'..."
+      script.env."${stageDefaultContainerKey}" = match.defaultContainer
     } else {
       logStr << "NOT setting cloud to '${match.cloud}'. Already set to -> '${args.cloud}'"
     }
