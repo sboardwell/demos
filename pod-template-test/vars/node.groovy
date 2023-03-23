@@ -5,9 +5,12 @@ def call(String label, Closure body) {
     String stageDefaultContainerKey = "CUSTOM_DEFAULT_CONTAINER_${STAGE_NAME}".replaceAll("[^A-Za-z0-9]", "_").toUpperCase()
     String defaultContainer = env."${stageDefaultContainerKey}" ?: env."${defaultContainerKey}" ?: ""
     if (defaultContainer) {
-      container(defaultContainer) {
-        steps.invokeMethod('node', [label, body] as Object[])
+      Closure newBody = {
+        container(defaultContainer) {
+          body.call()
+        }
       }
+      steps.invokeMethod('node', [label, newBody] as Object[])
     }
   } else {
     steps.invokeMethod('node', [label, body] as Object[])
