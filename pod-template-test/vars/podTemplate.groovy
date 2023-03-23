@@ -32,14 +32,13 @@ def call(def args, Closure body) {
 }
 @NonCPS
 def getInfos(String inheritFrom, def possibeMatches, def logStr) {
-    def label = Label.get(inheritFrom)
     // check clouds for label
-    label?.getClouds().each { cloud ->
+    Label.get(inheritFrom)?.getClouds().each { cloud ->
       // WARNING: the first template matching the label with be taken
-      def template = cloud.getTemplate(label)
+      def template = cloud.getTemplate(Label.get(inheritFrom))
       String defaultContainer = ''
       for (container in template.getContainers()) {
-        logStr << "Checking cloud: ${cloud.name}, template: ${template.name} (${template.labelSet}), container: ${container.name}"
+        logStr << "Checking cloud: ${cloud.name}, template: ${template.name} (${template.labelSet}), container: ${container.name}".toString()
         // take first non-jnlp as default
         if (container.name != 'jnlp') {
           defaultContainer = container.name
