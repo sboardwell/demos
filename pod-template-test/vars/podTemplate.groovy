@@ -25,7 +25,7 @@ def call(def args, Closure body) {
       // TODO - the code below is used in the node.groovy - place into a central util class
       String stageDefaultContainerKey = "CUSTOM_DEFAULT_CONTAINER"
       if (script.env.STAGE_NAME) {
-        stageDefaultContainerKey + "_${STAGE_NAME}".replaceAll("[^A-Za-z0-9]", "_").toUpperCase()
+        stageDefaultContainerKey += "_${STAGE_NAME}".replaceAll("[^A-Za-z0-9]", "_").toUpperCase()
       }
       logStr << "Setting env.${stageDefaultContainerKey} = '${match.defaultContainer}'..."
       script.env."${stageDefaultContainerKey}" = match.defaultContainer
