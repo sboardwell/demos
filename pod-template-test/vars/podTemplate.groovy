@@ -22,7 +22,7 @@ def call(def args, Closure body) {
     }
     if (!args.defaultContainer && match.defaultContainer) {
       logStr << "Setting defaultContainer -> '${match.defaultContainer}'..."
-      args.cloud = match.defaultContainer
+      args.defaultContainer = match.defaultContainer
     } else {
       logStr << "NOT setting cloud to '${match.cloud}'. Already set to -> '${args.cloud}'"
     }
