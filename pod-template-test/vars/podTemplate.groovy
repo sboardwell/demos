@@ -31,7 +31,7 @@ def call(def args, Closure body) {
   steps.invokeMethod('podTemplate', [args, body] as Object[])
 }
 @NonCPS
-def getInfos(String label, def possibeMatches, def logStr) {
+def getInfos(String inheritFrom, def possibeMatches, def logStr) {
     def label = Label.get(inheritFrom)
     // check clouds for label
     label?.getClouds().each { cloud ->
