@@ -35,7 +35,6 @@ def getInfos(String label, def possibeMatches, def logStr) {
     def label = Label.get(inheritFrom)
     // check clouds for label
     label?.getClouds().each { cloud ->
-      def cloudInfos = [template:]
       // WARNING: the first template matching the label with be taken
       def template = cloud.getTemplate(label)
       String defaultContainer = ''
