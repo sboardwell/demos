@@ -1,23 +1,54 @@
-def call(String label, Closure body) {
-  boolean nothingSetAndInStage = (env.POD_CONTAINER == null && env.STAGE_NAME)
-  if (env.POD_CONTAINER == null && env.STAGE_NAME) {
-    String defaultContainerKey = "CUSTOM_DEFAULT_CONTAINER"
-    String stageDefaultContainerKey = "CUSTOM_DEFAULT_CONTAINER_${STAGE_NAME}".replaceAll("[^A-Za-z0-9]", "_").toUpperCase()
-    String defaultContainer = env."${stageDefaultContainerKey}" ?: env."${defaultContainerKey}" ?: ""
+def call(String label = '', Closure body) {
+  Closure newBody = null
+  def logStr = ["Custom node step with label: ${label} - start"]
+  // USE IF WE SHOULD NOT SET DEFAULT CONTAINER AT PIPELINE ROOT (outside the stages block)
+  // if (env.POD_CONTAINER == null && env.STAGE_NAME ) {
+  // USE IF WE SHOULD ALLOW SETTING DEFAULT CONTAINER AT PIPELINE ROOT (outside the stages block)
+  if (env.POD_CONTAINER == null ) {
+
+    String inheritFrom = label
+    def possibleMatches = []
+    String defaultContainer = ''
+    AutoDefaultContainerUtil.getInfos(inheritFrom, possibleMatches, logStr)
+    if (possibleMatches.size() == 0) {
+      logStr << "Nothing found, nothing to do..."
+    }
+    else if (possibleMatches.size() > 1) {
+      def defaultContainerNames = possibleMatches.collect { it.defaultContainer } as Set
+      if (defaultContainerNames.size() == 1 && defaultContainerNames[0] != '') {
+        logStr << "Multiple matches found, but all have the same non-null defaultContainer..."
+        defaultContainer = possibleMatches[0].defaultContainer
+      } else {
+        logStr << "Multiple matches found with different values. Impossible to choose..."
+      }
+    }
+    else {
+      if (possibleMatches[0].defaultContainer) {
+        logStr << "Single match found with non-null defaultContainer..."
+        defaultContainer = possibleMatches[0].defaultContainer
+      } else {
+        logStr << "Single match found, but without a defaultContainer..."
+      }
+    }
     if (defaultContainer) {
-      Closure newBody = {
+      newBody = {
         container(defaultContainer) {
           body.call()
         }
       }
-      echo "Custom node step with label: ${label} - invoke newBody"
+    }
+    if (newBody) {
+      logStr << "Custom node step with label: ${label} - invoke newBody within container '${defaultContainer}' (POD_CONTAINER: '${env.POD_CONTAINER}', STAGE_NAME: '${env.STAGE_NAME}')"
+      steps.echo logStr.join('\n')
       steps.invokeMethod('node', [label, newBody] as Object[])
     } else {
-      echo "Custom node step with label: ${label} - invoke current body (no defaultContainer)"
+      logStr << "Custom node step with label: ${label} - invoke current body - no defaultContainer (POD_CONTAINER: '${env.POD_CONTAINER}', STAGE_NAME: '${env.STAGE_NAME}')"
+      steps.echo logStr.join('\n')
       steps.invokeMethod('node', [label, body] as Object[])
     }
   } else {
-    echo "Custom node step with label: ${label} - invoke current body"
+    logStr << "Custom node step with label: ${label} - invoke current body (POD_CONTAINER: '${env.POD_CONTAINER}', STAGE_NAME: '${env.STAGE_NAME}')"
+    steps.echo logStr.join('\n')
     steps.invokeMethod('node', [label, body] as Object[])
   }
 }
