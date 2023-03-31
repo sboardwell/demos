@@ -34,6 +34,6 @@ def call(def args = [:], Closure body) {
       }
     }
   }
-  steps.echo logStr.join('\n')
+  if (env.DEFAULT_CONTAINER_SOLUTION_VERBOSE == "true") { steps.echo logStr.join('\n') }
   steps.invokeMethod('podTemplate', [args, body] as Object[])
 }
