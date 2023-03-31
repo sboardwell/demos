@@ -39,16 +39,16 @@ def call(String label = '', Closure body) {
     }
     if (newBody) {
       logStr << "Custom node step with label: ${label} - invoke newBody within container '${defaultContainer}' (POD_CONTAINER: '${env.POD_CONTAINER}', STAGE_NAME: '${env.STAGE_NAME}')"
-      steps.echo logStr.join('\n')
+      if (env.DEFAULT_CONTAINER_SOLUTION_VERBOSE == "true") { steps.echo logStr.join('\n') }
       steps.invokeMethod('node', [label, newBody] as Object[])
     } else {
       logStr << "Custom node step with label: ${label} - invoke current body - no defaultContainer (POD_CONTAINER: '${env.POD_CONTAINER}', STAGE_NAME: '${env.STAGE_NAME}')"
-      steps.echo logStr.join('\n')
+      if (env.DEFAULT_CONTAINER_SOLUTION_VERBOSE == "true") { steps.echo logStr.join('\n') }
       steps.invokeMethod('node', [label, body] as Object[])
     }
   } else {
     logStr << "Custom node step with label: ${label} - invoke current body (POD_CONTAINER: '${env.POD_CONTAINER}', STAGE_NAME: '${env.STAGE_NAME}')"
-    steps.echo logStr.join('\n')
+    if (env.DEFAULT_CONTAINER_SOLUTION_VERBOSE == "true") { steps.echo logStr.join('\n') }
     steps.invokeMethod('node', [label, body] as Object[])
   }
 }
