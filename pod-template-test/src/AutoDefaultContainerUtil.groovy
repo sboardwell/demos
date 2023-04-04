@@ -17,7 +17,7 @@ static def getInfos(String inheritFrom, def possibleMatches, def logStr) {
         if (!defaultContainer && template.inheritFrom && template.inheritFrom != 'null' && template.inheritFrom != '') {
             def parentTemplate = cloud.getAllTemplates().find { it.name == template.inheritFrom }
             if (parentTemplate) {
-                logStr << "Checking cloud: ${cloud.name}, parentTemplate: ${parentTemplate.name} (${parentTemplate.labelSet}), templatesInnerInheritFrom: ${parentTemplate.inheritFrom}, containers: ${template.containers.collect { it.name }}".toString()
+                logStr << "Checking cloud: ${cloud.name}, parentTemplate: ${parentTemplate.name} (${parentTemplate.labelSet}), templatesInnerInheritFrom: ${parentTemplate.inheritFrom}, containers: ${parentTemplate.containers.collect { it.name }}".toString()
                 for (container in parentTemplate.getContainers()) {
                     // take first non-jnlp as default
                     if (container.name != 'jnlp') {
