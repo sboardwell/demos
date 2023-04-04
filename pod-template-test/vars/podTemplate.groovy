@@ -1,5 +1,5 @@
 def call(def args = [:], Closure body) {
-    def logStr = ["Custom podTemplate step running with: ${args} (POD_CONTAINER: '${env.POD_CONTAINER}', STAGE_NAME: '${env.STAGE_NAME}')"]
+    def logStr = ["Custom podTemplate step running with: ${args} (POD_CONTAINER: '${env.POD_CONTAINER}', STAGE_NAME: '${env.STAGE_NAME}')".toString()]
   // only process if inheritFrom is passed...
   if (args.containsKey('inheritFrom') && args.inheritFrom != '') {
     String inheritFrom = args.inheritFrom
