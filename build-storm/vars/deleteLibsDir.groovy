@@ -8,10 +8,6 @@ def call(String jobName) {
   deleteLibsDir(jobName, env.BUILD_NUMBER)  
 }
 
-def call(String jobName, String buildNumber) {
-  deleteLibsDir(jobName, buildNumber)  
-}
-
 @NonCPS
 def deleteLibsDir(String jobName, String buildNumber) {
   try {
