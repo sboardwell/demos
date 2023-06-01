@@ -1,11 +1,11 @@
 // Deletes the libs directory of a build.
 // WARNING: EXECUTE AT THE END OF THE BUILD ONLY 
 def call() {
-  call(JOB_NAME, BUILD_NUMBER)
+  call(env.JOB_NAME, env.BUILD_NUMBER)
 }
 
 def call(String jobName) {
-  deleteLibsDir(jobName, BUILD_NUMBER)  
+  deleteLibsDir(jobName, env.BUILD_NUMBER)  
 }
 
 def call(String jobName, String buildNumber) {
