@@ -5,11 +5,11 @@ def call() {
 }
 
 def call(String jobName) {
-  deleteLibsDir(String jobName, BUILD_NUMBER)  
+  deleteLibsDir(jobName, BUILD_NUMBER)  
 }
 
 def call(String jobName, String buildNumber) {
-  deleteLibsDir(String jobName, String buildNumber)  
+  deleteLibsDir(jobName, buildNumber)  
 }
 
 @NonCPS
