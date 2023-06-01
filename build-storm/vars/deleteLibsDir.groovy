@@ -4,6 +4,10 @@ def call() {
   call(JOB_NAME, BUILD_NUMBER)
 }
 
+def call(String jobName) {
+  deleteLibsDir(String jobName, BUILD_NUMBER)  
+}
+
 def call(String jobName, String buildNumber) {
   deleteLibsDir(String jobName, String buildNumber)  
 }
