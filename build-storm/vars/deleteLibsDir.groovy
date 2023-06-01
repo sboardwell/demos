@@ -4,8 +4,8 @@ def call() {
   call(env.JOB_NAME, env.BUILD_NUMBER)
 }
 
-def call(String jobName) {
-  deleteLibsDir(jobName, env.BUILD_NUMBER)  
+def call(String jobName, String buildNumber) {
+  deleteLibsDir(jobName, buildNumber)  
 }
 
 @NonCPS
