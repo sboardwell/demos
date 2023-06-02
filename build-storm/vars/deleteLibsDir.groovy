@@ -12,8 +12,8 @@ def call(String jobName, String buildNumber) {
 def deleteLibsDir(String jobName, String buildNumber) {
   try {
     def jobObj = Jenkins.instance.getItem(jobName)
-    def jobRootDir = jobObj.rootDir
-    def buildLibsDir = new File(jobRootDir, "builds/${buildNumber}/libs")
+    def jobBuildsDir = Jenkins.instance.getBuildDirFor(jobObj)
+    def buildLibsDir = new File(jobBuildsDir, "${buildNumber}/libs")
     if (buildLibsDir.exists()) {
       println "Deleting libs dir: ${buildLibsDir}"
       buildLibsDir.deleteDir()
